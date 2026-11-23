@@ -1,0 +1,19 @@
+{
+  "version": "0.2",
+  "currency": "USD",
+  "pastTotalMonthlyCost": "2140.55",
+  "totalMonthlyCost": "2489.71",
+  "diffTotalMonthlyCost": "349.16",
+  "projects": [
+    {
+      "name": "orders-infra",
+      "diff": {
+        "resources": [
+          {"name": "module.batch.azurerm_linux_virtual_machine.worker", "monthlyCost": "336.38"},
+          {"name": "azurerm_key_vault.batch", "monthlyCost": "0.03"},
+          {"name": "azurerm_storage_account.exports", "monthlyCost": "12.75"}
+        ]
+      }
+    }
+  ]
+}

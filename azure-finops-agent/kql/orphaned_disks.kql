@@ -1,0 +1,7 @@
+// Managed disks not attached to any VM (still billed)
+resources
+| where type =~ 'microsoft.compute/disks'
+| where tostring(properties.diskState) =~ 'Unattached'
+| extend sku = strcat(tostring(sku.name), ' ', tostring(properties.tier)),
+         sizeGb = toint(properties.diskSizeGB)
+| project id, name, type = tolower(type), sku, sizeGb, location, tags

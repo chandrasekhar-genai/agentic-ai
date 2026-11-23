@@ -1,0 +1,12 @@
+# Add to your Alertmanager config (or AlertmanagerConfig CRD) to route alerts to the agent.
+route:
+  routes:
+    - receiver: aiops-agent
+      matchers:
+        - severity=~"critical|warning"
+      continue: true          # keep paging humans as well
+receivers:
+  - name: aiops-agent
+    webhook_configs:
+      - url: http://aiops-agent.aiops.svc:8080/alerts
+        send_resolved: false

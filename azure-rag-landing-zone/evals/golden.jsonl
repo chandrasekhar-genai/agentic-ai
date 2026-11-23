@@ -1,0 +1,12 @@
+{"id": "access-duration", "question": "What is the maximum PIM activation duration for production access?", "expected_source": "production-access.md", "must_include": ["8 hours"]}
+{"id": "access-approver", "question": "Who approves production role activation requests?", "expected_source": "production-access.md", "must_include": ["on-call lead"]}
+{"id": "breakglass-review", "question": "How quickly must a break-glass sign-in be reviewed?", "expected_source": "production-access.md", "must_include": ["24 hours"]}
+{"id": "sev1-ack", "question": "How fast must a SEV1 incident be acknowledged?", "expected_source": "incident-severity.md", "must_include": ["15 minutes"]}
+{"id": "pir-deadline", "question": "When is the post-incident review due for a SEV2?", "expected_source": "incident-severity.md", "must_include": ["5 business days"]}
+{"id": "db-retention", "question": "How long is point-in-time restore retention for production databases?", "expected_source": "backup-and-restore.md", "must_include": ["35 days"]}
+{"id": "tier1-rpo", "question": "What is the RPO for tier-1 services?", "expected_source": "backup-and-restore.md", "must_include": ["15 minutes"]}
+{"id": "blob-soft-delete", "question": "How many days is blob soft delete enabled on production storage accounts?", "expected_source": "backup-and-restore.md", "must_include": ["14 days"]}
+{"id": "rollback", "question": "How do I roll back a deployment on AKS?", "expected_source": "kubernetes-deployments.md", "must_include": ["revert the pull request"]}
+{"id": "freeze", "question": "When does the end-of-year change freeze apply?", "expected_source": "kubernetes-deployments.md", "must_include": ["25th of December"]}
+{"id": "out-of-scope-1", "question": "What is the cafeteria lunch menu on Thursday?", "expected_source": null, "must_include": []}
+{"id": "out-of-scope-2", "question": "Which football team won the league last season?", "expected_source": null, "must_include": []}

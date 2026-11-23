@@ -1,0 +1,41 @@
+image:
+  repository: ghcr.io/chandrasekhar-genai/aiops-incident-agent
+  tag: ""            # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+replicaCount: 1      # incidents are held in memory; see README "Production hardening"
+
+llm:
+  provider: azure    # azure | offline
+  azureOpenAIEndpoint: ""          # https://<resource>.openai.azure.com/
+  azureOpenAIDeployment: gpt-4o
+  azureOpenAIApiVersion: "2024-10-21"
+
+prometheusUrl: http://kube-prometheus-stack-prometheus.monitoring:9090
+publicBaseUrl: ""
+demoMode: false
+
+guardrails:
+  maxAgentSteps: 8
+  maxScaleReplicas: 10
+  allowedNamespaces: []          # empty = any namespace the RBAC below allows
+
+# Secret with optional keys NOTIFY_WEBHOOK_URL and APPROVAL_TOKEN
+# (create it with External Secrets / CSI Secret Store from Key Vault)
+existingSecret: aiops-agent
+
+# Azure Workload Identity: lets the pod call Azure OpenAI with Entra ID, no API key
+workloadIdentity:
+  enabled: true
+  clientId: ""
+
+rbac:
+  # Namespaces the agent may read and remediate. Empty = cluster-wide read + write.
+  namespaces: []
+
+resources:
+  requests: { cpu: 50m, memory: 128Mi }
+  limits: { memory: 256Mi }
+
+service:
+  port: 8080

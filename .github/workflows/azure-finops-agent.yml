@@ -1,0 +1,36 @@
+name: azure-finops-agent
+
+on:
+  push:
+    branches: [main]
+    paths: ["azure-finops-agent/**", ".github/workflows/azure-finops-agent.yml"]
+  pull_request:
+    paths: ["azure-finops-agent/**", ".github/workflows/azure-finops-agent.yml"]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: azure-finops-agent
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: pytest -q
+      - name: Sample run
+        run: |
+          finops-agent analyze --costs examples/costs.csv --inventory examples/inventory.csv \
+            --tf-dir examples/terraform --out out
+          cat out/report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: finops-sample-report
+          path: azure-finops-agent/out/

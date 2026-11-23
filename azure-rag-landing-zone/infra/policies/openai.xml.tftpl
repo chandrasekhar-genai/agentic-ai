@@ -1,0 +1,32 @@
+<policies>
+  <inbound>
+    <base />
+    <!-- Only the listed managed identities may call the model -->
+    <validate-azure-ad-token tenant-id="${tenant_id}" header-name="Authorization" failed-validation-httpcode="401" failed-validation-error-message="Unauthorized">
+      <client-application-ids>
+%{ for id in client_ids ~}
+        <application-id>${id}</application-id>
+%{ endfor ~}
+      </client-application-ids>
+      <audiences>
+        <audience>https://cognitiveservices.azure.com</audience>
+      </audiences>
+    </validate-azure-ad-token>
+    <!-- Token budget per calling identity (appid claim), so one client cannot starve the rest -->
+    <azure-openai-token-limit counter-key="@(context.Request.Headers.GetValueOrDefault("Authorization","").AsJwt()?.Claims.GetValueOrDefault("appid", "unknown"))" tokens-per-minute="${tpm}" estimate-prompt-tokens="true" remaining-tokens-header-name="x-remaining-tokens" />
+    <set-backend-service backend-id="${backend_id}" />
+    <!-- Gateway calls the private Azure OpenAI endpoint with its own managed identity -->
+    <authentication-managed-identity resource="https://cognitiveservices.azure.com" />
+  </inbound>
+  <backend>
+    <retry condition="@(context.Response.StatusCode == 429 || context.Response.StatusCode >= 500)" count="2" interval="2" delta="2" max-interval="10" first-fast-retry="false">
+      <forward-request buffer-request-body="true" />
+    </retry>
+  </backend>
+  <outbound>
+    <base />
+  </outbound>
+  <on-error>
+    <base />
+  </on-error>
+</policies>

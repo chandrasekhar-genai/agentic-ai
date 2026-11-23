@@ -1,0 +1,48 @@
+name: azure-rag-landing-zone
+
+on:
+  push:
+    branches: [main]
+    paths: ["azure-rag-landing-zone/**", ".github/workflows/azure-rag-landing-zone.yml"]
+  pull_request:
+    paths: ["azure-rag-landing-zone/**", ".github/workflows/azure-rag-landing-zone.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: azure-rag-landing-zone
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: pytest -q
+      - name: Eval gate (offline baseline)
+        run: python evals/run_eval.py
+
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: azure-rag-landing-zone/infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false
+      - run: terraform validate
+      - uses: terraform-linters/setup-tflint@v4
+      - run: tflint --init && tflint
+      - name: Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: azure-rag-landing-zone/infra
+          framework: terraform
+          soft_fail: true   # report findings in the log; tighten once the baseline is triaged

@@ -1,0 +1,57 @@
+{{- /*
+Least privilege: read pods, logs and events; get/patch Deployments and their
+scale subresource (rollout restart and scale). Nothing else — no Secrets, no
+deletes, no exec. Scoped to listed namespaces when rbac.namespaces is set.
+*/ -}}
+{{- $name := include "aiops-agent.name" . -}}
+{{- $rules := list
+  (dict "apiGroups" (list "") "resources" (list "pods" "pods/log" "events") "verbs" (list "get" "list"))
+  (dict "apiGroups" (list "apps") "resources" (list "deployments" "deployments/scale") "verbs" (list "get" "patch"))
+-}}
+{{- if .Values.rbac.namespaces }}
+{{- range .Values.rbac.namespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}
+  namespace: {{ . }}
+rules:
+  {{- toYaml $rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}
+  namespace: {{ . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ $.Release.Namespace }}
+{{- end }}
+{{- else }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $name }}
+rules:
+  {{- toYaml $rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $name }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

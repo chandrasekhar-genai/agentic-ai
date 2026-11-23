@@ -1,0 +1,39 @@
+name: terraform-pr-review-agent
+
+on:
+  push:
+    branches: [main]
+    paths: ["terraform-pr-review-agent/**", ".github/workflows/terraform-pr-review-agent.yml"]
+  pull_request:
+    paths: ["terraform-pr-review-agent/**", ".github/workflows/terraform-pr-review-agent.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform-pr-review-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: pytest -q
+
+  # Run the action itself against the example fixtures (fail-on never: the fixture is meant to be bad)
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./terraform-pr-review-agent
+        with:
+          plan-json: terraform-pr-review-agent/examples/plan.json
+          checkov-json: terraform-pr-review-agent/examples/checkov.json
+          infracost-json: terraform-pr-review-agent/examples/infracost.json
+          config: terraform-pr-review-agent/.tfreview.toml.example
+          fail-on: never

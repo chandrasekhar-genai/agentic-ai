@@ -1,0 +1,71 @@
+# Weekly FinOps run against a real subscription.
+# Setup: an Entra app with a federated credential for this repo (OIDC, no secrets),
+# Reader on the subscription, Storage Blob Data Reader on the export account,
+# and Azure OpenAI User on the model resource. Set the repository variables below.
+name: weekly-finops
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"   # Mondays 08:17 Gulf Standard Time
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+  pull-requests: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    env:
+      SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      EXPORT_ACCOUNT: ${{ vars.COST_EXPORT_STORAGE_ACCOUNT }}
+      EXPORT_CONTAINER: ${{ vars.COST_EXPORT_CONTAINER }}
+      AZURE_OPENAI_ENDPOINT: ${{ vars.AZURE_OPENAI_ENDPOINT }}
+      AZURE_OPENAI_DEPLOYMENT: ${{ vars.AZURE_OPENAI_DEPLOYMENT }}
+      TF_DIR: ${{ vars.TF_DIR || 'infra' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ".[azure]"
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Download latest cost export
+        run: |
+          latest=$(az storage blob list --auth-mode login --account-name "$EXPORT_ACCOUNT" \
+            -c "$EXPORT_CONTAINER" --query "sort_by([?ends_with(name, '.csv')], &properties.lastModified)[-1].name" -o tsv)
+          az storage blob download --auth-mode login --account-name "$EXPORT_ACCOUNT" \
+            -c "$EXPORT_CONTAINER" -n "$latest" -f costs.csv --only-show-errors
+
+      - name: Build inventory (Resource Graph + Azure Monitor)
+        run: python scripts/build_inventory.py --subscription "$SUBSCRIPTION_ID" > inventory.csv
+
+      - name: Analyze
+        run: |
+          finops-agent analyze --llm azure --costs costs.csv --inventory inventory.csv \
+            --tf-dir "$TF_DIR" --out out
+          cat out/report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Apply Terraform patch
+        run: if [ -s out/finops.patch ]; then git apply out/finops.patch; fi
+
+      - name: Open pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: finops/weekly
+          title: "FinOps: weekly optimisation changes"
+          body-path: out/report.md
+          add-paths: ${{ env.TF_DIR }}/**
+          labels: finops
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: finops-report
+          path: out/

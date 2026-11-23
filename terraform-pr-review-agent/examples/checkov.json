@@ -1,0 +1,26 @@
+{
+  "check_type": "terraform",
+  "results": {
+    "failed_checks": [
+      {
+        "check_id": "CKV_AZURE_59",
+        "check_name": "Ensure that Storage accounts disallow public access",
+        "resource": "azurerm_storage_account.exports",
+        "file_path": "/storage.tf"
+      },
+      {
+        "check_id": "CKV_AZURE_10",
+        "check_name": "Ensure that SSH access is restricted from the internet",
+        "resource": "azurerm_network_security_rule.ssh",
+        "file_path": "/network.tf"
+      },
+      {
+        "check_id": "CKV_AZURE_42",
+        "check_name": "Ensure the key vault is recoverable",
+        "resource": "azurerm_key_vault.batch",
+        "file_path": "/batch.tf"
+      }
+    ]
+  },
+  "summary": {"passed": 41, "failed": 3, "skipped": 0}
+}

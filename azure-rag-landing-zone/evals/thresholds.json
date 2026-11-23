@@ -1,0 +1,7 @@
+{
+  "retrieval_hit_rate": 0.9,
+  "answer_recall": 0.8,
+  "citation_rate": 0.9,
+  "refusal_accuracy": 1.0,
+  "p95_latency_ms": 4000
+}

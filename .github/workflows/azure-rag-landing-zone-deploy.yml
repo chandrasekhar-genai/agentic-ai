@@ -1,0 +1,98 @@
+# Build → plan/apply (with environment approval) → ingest → eval gate against the deployed API.
+# Auth: GitHub OIDC federated credential on an Entra app (no stored secrets).
+name: azure-rag-landing-zone-deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [dev, prod]
+        default: dev
+
+permissions:
+  id-token: write
+  contents: read
+  packages: write
+
+concurrency: deploy-${{ inputs.environment }}
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.meta.outputs.ref }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: meta
+        run: echo "ref=ghcr.io/${{ github.repository_owner }}/azure-rag-landing-zone:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: azure-rag-landing-zone
+          push: true
+          tags: ${{ steps.meta.outputs.ref }}
+
+  infra:
+    needs: image
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}   # add required reviewers on prod
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    outputs:
+      api_url: ${{ steps.out.outputs.api_url }}
+      ingest_job: ${{ steps.out.outputs.ingest_job }}
+      resource_group: ${{ steps.out.outputs.resource_group }}
+    defaults:
+      run:
+        working-directory: azure-rag-landing-zone/infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+      - run: terraform init -backend-config="env/${{ inputs.environment }}.backend.hcl"
+      - run: terraform plan -var-file="env/${{ inputs.environment }}.tfvars" -var="app_image=${{ needs.image.outputs.ref }}" -out=tfplan
+      - run: terraform apply -auto-approve tfplan
+      - id: out
+        run: |
+          echo "api_url=$(terraform output -raw rag_api_url)" >> "$GITHUB_OUTPUT"
+          echo "ingest_job=$(terraform output -raw ingest_job_name)" >> "$GITHUB_OUTPUT"
+          echo "resource_group=$(terraform output -raw resource_group_name)" >> "$GITHUB_OUTPUT"
+
+  ingest-and-eval:
+    needs: infra
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Run ingestion job inside the VNet and wait for it
+        run: |
+          set -euo pipefail
+          name="${{ needs.infra.outputs.ingest_job }}"; rg="${{ needs.infra.outputs.resource_group }}"
+          exec=$(az containerapp job start -n "$name" -g "$rg" --query name -o tsv)
+          for _ in $(seq 1 60); do
+            status=$(az containerapp job execution show -n "$name" -g "$rg" --job-execution-name "$exec" --query properties.status -o tsv)
+            echo "ingest: $status"
+            [ "$status" = "Succeeded" ] && break
+            [ "$status" = "Failed" ] && exit 1
+            sleep 15
+          done
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install httpx
+      - name: Eval gate against the deployed API
+        run: python azure-rag-landing-zone/evals/run_eval.py --api-url "${{ needs.infra.outputs.api_url }}"

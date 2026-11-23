@@ -1,0 +1,56 @@
+name: Terraform PR review agent
+description: Landing-zone guardrails on the Terraform plan, plus Checkov, Infracost and an AI review comment.
+author: Chandrasekhar Venkata Malladi
+branding:
+  icon: shield
+  color: purple
+
+inputs:
+  plan-json:
+    description: Path to `terraform show -json tfplan` output
+    required: true
+  checkov-json:
+    description: Path to Checkov JSON output (optional)
+    required: false
+    default: ""
+  infracost-json:
+    description: Path to `infracost diff --format json` output (optional)
+    required: false
+    default: ""
+  config:
+    description: Path to .tfreview.toml
+    required: false
+    default: .tfreview.toml
+  fail-on:
+    description: high | medium | low | never
+    required: false
+    default: high
+  llm:
+    description: offline | azure (azure needs AZURE_OPENAI_ENDPOINT and an azure/login step or API key)
+    required: false
+    default: offline
+  github-token:
+    description: Token used to post the PR comment
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - shell: bash
+      run: |
+        extras=""
+        if [ "${{ inputs.llm }}" = "azure" ]; then extras="[azure]"; fi
+        pip install --quiet "${{ github.action_path }}${extras}"
+    - shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        TFREVIEW_LLM: ${{ inputs.llm }}
+      run: |
+        args=(--plan "${{ inputs.plan-json }}" --config "${{ inputs.config }}" --fail-on "${{ inputs.fail-on }}" --post)
+        [ -n "${{ inputs.checkov-json }}" ] && args+=(--checkov "${{ inputs.checkov-json }}")
+        [ -n "${{ inputs.infracost-json }}" ] && args+=(--infracost "${{ inputs.infracost-json }}")
+        tfreview "${args[@]}"

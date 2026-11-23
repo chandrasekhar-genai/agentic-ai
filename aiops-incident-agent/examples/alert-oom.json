@@ -1,0 +1,23 @@
+{
+  "version": "4",
+  "status": "firing",
+  "receiver": "aiops-agent",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "KubePodCrashLooping",
+        "severity": "critical",
+        "namespace": "shop",
+        "deployment": "checkout-api",
+        "cluster": "aks-prod-uaenorth"
+      },
+      "annotations": {
+        "summary": "Pod shop/checkout-api is crash looping",
+        "description": "Pod checkout-api-7d9f8b6c5-x2k4p restarted 14 times in the last 30 minutes."
+      },
+      "startsAt": "2026-11-20T08:14:00Z",
+      "fingerprint": "a1f0c3e9b7d24411"
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aiops-agent.name" . }}
+  labels:
+    {{- include "aiops-agent.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "aiops-agent.selector" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "aiops-agent.selector" . | nindent 8 }}
+        {{- if .Values.workloadIdentity.enabled }}
+        azure.workload.identity/use: "true"
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "aiops-agent.name" . }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: LLM_PROVIDER
+              value: {{ .Values.llm.provider | quote }}
+            - name: AZURE_OPENAI_ENDPOINT
+              value: {{ .Values.llm.azureOpenAIEndpoint | quote }}
+            - name: AZURE_OPENAI_DEPLOYMENT
+              value: {{ .Values.llm.azureOpenAIDeployment | quote }}
+            - name: AZURE_OPENAI_API_VERSION
+              value: {{ .Values.llm.azureOpenAIApiVersion | quote }}
+            - name: PROMETHEUS_URL
+              value: {{ .Values.prometheusUrl | quote }}
+            - name: PUBLIC_BASE_URL
+              value: {{ .Values.publicBaseUrl | quote }}
+            - name: AIOPS_DEMO
+              value: {{ .Values.demoMode | quote }}
+            - name: MAX_AGENT_STEPS
+              value: {{ .Values.guardrails.maxAgentSteps | quote }}
+            - name: MAX_SCALE_REPLICAS
+              value: {{ .Values.guardrails.maxScaleReplicas | quote }}
+            - name: ALLOWED_NAMESPACES
+              value: {{ join "," .Values.guardrails.allowedNamespaces | quote }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.existingSecret }}
+                optional: true
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

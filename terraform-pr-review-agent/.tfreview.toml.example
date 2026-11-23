@@ -1,0 +1,14 @@
+[tfreview]
+# Regions approved by the landing zone (data residency)
+allowed_locations = ["uaenorth", "uaecentral"]
+
+# Tags every taggable resource must carry
+required_tags = ["owner", "env", "cost-center"]
+
+# Fail the check at this severity or above: high | medium | low | never
+fail_on = "high"
+
+# Accepted exceptions: a rule id, or "rule-id:resource.address". Link the approval in the PR.
+ignore = [
+  # "nsg-open-admin-port:azurerm_network_security_rule.bastion_inbound",
+]

@@ -1,0 +1,115 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.8",
+  "resource_changes": [
+    {
+      "address": "azurerm_resource_group.app",
+      "mode": "managed",
+      "type": "azurerm_resource_group",
+      "name": "app",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["no-op"],
+        "before": {"name": "rg-orders-prod", "location": "uaenorth", "tags": {"owner": "orders", "env": "prod", "cost-center": "cc-114"}},
+        "after": {"name": "rg-orders-prod", "location": "uaenorth", "tags": {"owner": "orders", "env": "prod", "cost-center": "cc-114"}},
+        "after_unknown": {}
+      }
+    },
+    {
+      "address": "azurerm_storage_account.exports",
+      "mode": "managed",
+      "type": "azurerm_storage_account",
+      "name": "exports",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "name": "stordersexports", "location": "uaenorth", "account_tier": "Standard",
+          "public_network_access_enabled": false, "min_tls_version": "TLS1_2",
+          "allow_nested_items_to_be_public": false, "shared_access_key_enabled": false,
+          "tags": {"owner": "orders", "env": "prod"}
+        },
+        "after": {
+          "name": "stordersexports", "location": "uaenorth", "account_tier": "Standard",
+          "public_network_access_enabled": true, "min_tls_version": "TLS1_2",
+          "allow_nested_items_to_be_public": false, "shared_access_key_enabled": true,
+          "tags": {"owner": "orders", "env": "prod"}
+        },
+        "after_unknown": {}
+      }
+    },
+    {
+      "address": "azurerm_postgresql_flexible_server.orders",
+      "mode": "managed",
+      "type": "azurerm_postgresql_flexible_server",
+      "name": "orders",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "action_reason": "replace_because_cannot_update",
+      "change": {
+        "actions": ["delete", "create"],
+        "before": {
+          "name": "psql-orders-prod", "location": "uaenorth", "sku_name": "GP_Standard_D4ds_v5",
+          "zone": "1", "version": "15", "public_network_access_enabled": false,
+          "tags": {"owner": "orders", "env": "prod", "cost-center": "cc-114"}
+        },
+        "after": {
+          "name": "psql-orders-prod", "location": "uaenorth", "sku_name": "GP_Standard_D4ds_v5",
+          "zone": "2", "version": "16", "public_network_access_enabled": false,
+          "tags": {"owner": "orders", "env": "prod", "cost-center": "cc-114"}
+        },
+        "after_unknown": {"id": true, "fqdn": true},
+        "replace_paths": [["version"]]
+      }
+    },
+    {
+      "address": "azurerm_network_security_rule.ssh",
+      "mode": "managed",
+      "type": "azurerm_network_security_rule",
+      "name": "ssh",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "allow-ssh", "priority": 200, "direction": "Inbound", "access": "Allow", "protocol": "Tcp",
+          "source_port_range": "*", "destination_port_range": "22",
+          "source_address_prefix": "*", "destination_address_prefix": "*"
+        },
+        "after_unknown": {"id": true}
+      }
+    },
+    {
+      "address": "module.batch.azurerm_linux_virtual_machine.worker",
+      "mode": "managed",
+      "type": "azurerm_linux_virtual_machine",
+      "name": "worker",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "vm-batch-worker", "location": "westeurope", "size": "Standard_D8s_v5",
+          "tags": {"owner": "data", "env": "prod"}
+        },
+        "after_unknown": {"id": true, "private_ip_address": true}
+      }
+    },
+    {
+      "address": "azurerm_key_vault.batch",
+      "mode": "managed",
+      "type": "azurerm_key_vault",
+      "name": "batch",
+      "provider_name": "registry.terraform.io/hashicorp/azurerm",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "name": "kv-batch-prod", "location": "uaenorth", "sku_name": "standard",
+          "purge_protection_enabled": false, "public_network_access_enabled": false,
+          "tags": {"owner": "data", "env": "prod", "cost-center": "cc-207"}
+        },
+        "after_unknown": {"id": true, "vault_uri": true}
+      }
+    }
+  ]
+}

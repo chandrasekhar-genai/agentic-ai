@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aiops-agent
+  namespace: argocd
+spec:
+  project: platform
+  source:
+    repoURL: https://github.com/chandrasekhar-genai/agentic-ai.git
+    targetRevision: main
+    path: aiops-incident-agent/deploy/helm/aiops-agent
+    helm:
+      valuesObject:
+        llm:
+          azureOpenAIEndpoint: https://<your-aoai>.openai.azure.com/
+        workloadIdentity:
+          clientId: <managed-identity-client-id>
+        guardrails:
+          allowedNamespaces: [shop, payments]
+        rbac:
+          namespaces: [shop, payments]
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: aiops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,6 @@
+// Virtual machines with size and power state (running / stopped / deallocated)
+resources
+| where type =~ 'microsoft.compute/virtualmachines'
+| extend size = tostring(properties.hardwareProfile.vmSize),
+         power = tostring(properties.extended.instanceView.powerState.code)
+| project id, name, type = tolower(type), size, location, power, tags

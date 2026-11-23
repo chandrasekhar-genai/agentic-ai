@@ -1,0 +1,6 @@
+apiVersion: v2
+name: aiops-agent
+description: Agentic incident investigation for Kubernetes with human-approved remediation
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

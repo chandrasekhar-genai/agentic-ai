@@ -1,0 +1,23 @@
+{
+  "version": "4",
+  "status": "firing",
+  "receiver": "aiops-agent",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "HighRequestLatencyP99",
+        "severity": "warning",
+        "namespace": "payments",
+        "deployment": "payments-api",
+        "cluster": "aks-prod-uaenorth"
+      },
+      "annotations": {
+        "summary": "p99 latency above 1s on payments-api",
+        "description": "p99 latency for POST /v1/charge has been above 1s for 10 minutes (SLO: 800ms)."
+      },
+      "startsAt": "2026-11-20T09:02:00Z",
+      "fingerprint": "b7c2d9e0f1a34522"
+    }
+  ]
+}
